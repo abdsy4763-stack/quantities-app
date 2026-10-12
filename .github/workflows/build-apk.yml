@@ -1,0 +1,32 @@
+name: Build APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate project folder
+        run: echo "DIR=$(dirname "$(find . -name pubspec.yaml -not -path './.git/*' | head -1)")" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - name: Generate Android scaffold
+        working-directory: ${{ env.DIR }}
+        run: flutter create . --platforms=android --org com.quantities --project-name quantities_app
+      - name: Get packages
+        working-directory: ${{ env.DIR }}
+        run: flutter pub get
+      - name: Run tests
+        working-directory: ${{ env.DIR }}
+        run: flutter test
+      - name: Build APK
+        working-directory: ${{ env.DIR }}
+        run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quantities-apk
+          path: ${{ env.DIR }}/build/app/outputs/flutter-apk/app-release.apk
